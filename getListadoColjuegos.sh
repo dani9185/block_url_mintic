@@ -30,6 +30,8 @@ if [ -z "${OUTPUT}" ]; then
 		cat listadoColjuegos.txt | wc -l
 	fi
 	rm -f checksum*
+    #Convierte la codificacion del archivo a UTF-8
+    iconv -f ISO-8859-1 -t UTF-8//TRANSLIT listadoColjuegos.txt -o listadoColjuegos.txt
 elif [ "${OUTPUT}" == "Username/Password Authentication Failed." ]; then
 	echo "ERROR: Usuario o Password fallaron!!!"
 else
