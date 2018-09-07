@@ -31,9 +31,10 @@ import tldextract
 PATH = ""
 PATH_BIND = "/etc/bind/named.conf.redirect-coljuegos.zones"
 # Variales con informacion de Acceso MIN TIC
-URL_MINTIC = "http://archivo.mintic.gov.co/ubpi/664/articles-75802_archivo_txt.txt"
+#URL_MINTIC = "http://archivo.mintic.gov.co/ubpi/664/articles-78508_archivo_txt.txt"
 User = "ArturoCuellar"
 Pass = "ArturoCuellar6542"
+URL_BASE = "http://archivo.mintic.gov.co/ubpi/620/w3-propertyvalue-30839.html"
 #******************************************************************************
 # Funtions
 #******************************************************************************
@@ -44,6 +45,27 @@ def nonblank_lines(f):
         line = l.rstrip()
         if line:
             yield line
+
+
+def get_output_cmd(cmd):
+    out = subprocess.Popen(cmd,
+                           stdout=subprocess.PIPE,
+                           shell=True).stdout.read().rstrip()
+    return(str(out))
+
+
+def get_link(url, pos):
+    cmd = "lynx -accept_all_cookies " \
+          "-auth=ArturoCuellar:ArturoCuellar6542 " \
+          "-listonly -dump " + url + " | grep " + pos
+    out = get_output_cmd(cmd)
+    out = out.split(" ")[3].replace("'","")
+    return(out)
+
+
+def get_mintic_link(url):
+    url_temp = get_link(url, "16")
+    return(get_link(url_temp, "18"))
 
 
 def url2domain(url):
@@ -59,16 +81,19 @@ def domain2bindfile(domain):
 
 
 def main():
+    URL_MINTIC = get_mintic_link(URL_BASE)
     #Checkea que el file exista y se pueda acceder
     cmd = "wget -SO- -T 1 -t 1 --spider --user=" + User + " --password=" \
           + Pass + " " + URL_MINTIC + " 2>&1 >/dev/null | " \
           "egrep -i '404|Authentication Fail'"
-    check_list = subprocess.getoutput(cmd)
+    check_list = get_output_cmd(cmd).replace("b'","").replace("'","")
+    print(check_list)
+    print(type(check_list))
     if(check_list == ""):
         #Descarga el listado en formato txt de MINTIC
         cmd = "wget -q --user=" + User + " --password=" + Pass + \
               " --output-document=listadoColjuegos_new.txt " + URL_MINTIC
-        subprocess.call(cmd, shell=True)
+        get_output_cmd(cmd)
         #Saca los MD5 de los archivos para comparar si hay algun cambio.
         subprocess.call("md5sum listadoColjuegos.txt | awk {'print $1}' > "
                         "checksum_listadoColjuegos", shell=True)
@@ -76,11 +101,11 @@ def main():
                         "checksum_listadoColjuegos_new", shell=True)
         #Compara los MD5 obtenidos para revisar si hay diferencia
         cmd = "diff -q checksum_listadoColjuegos checksum_listadoColjuegos_new"
-        Lists_diff = subprocess.getoutput(cmd)
+        Lists_diff = get_output_cmd(cmd)
         if(Lists_diff == ""):
             # Listados Coljuegos Iguales
             print("Listas Iguales")
-            subprocess.call("rm -f listadoColjuegos_new.txt", shell=True)
+            os.remove("listadoColjuegos_new.txt")
         else:
             print("Listas Diferentes")
             # Listados Coljuegos Diferentes
